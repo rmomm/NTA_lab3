@@ -260,21 +260,23 @@ uint64_t computeLogBeta(uint64_t alpha, uint64_t beta, uint64_t p, const vector<
 
     vector<int> exp;
 
-    while (true) {
-        uint64_t l = dist(gen);
-
-        uint64_t value = (beta * pow_mod(alpha, l, p)) % p;
+    for (uint64_t l = 0; l < mod; l++) {
+        uint64_t value =
+            (beta * pow_mod(alpha, l, p)) % p;
 
         if (factorOverBase(value, base, exp)) {
+
             uint64_t sum = 0;
 
             for (size_t i = 0; i < base.size(); i++) {
-                sum = (sum + (uint64_t)exp[i] * log_p[i]) % mod;
+                sum =(sum + (uint64_t)exp[i] * log_p[i]) % mod;
             }
 
-            sum = (sum + mod - l) % mod;
+            uint64_t x = (sum + mod - (l % mod)) % mod;
 
-            return sum;
+            if (pow_mod(alpha, x, p) == beta) 
+                return x; 
+
         }
     }
 }
@@ -285,7 +287,7 @@ uint64_t index_calculus( uint64_t alpha, uint64_t beta, uint64_t p){
     uint64_t B = computeBound(p);
     vector<uint64_t> base = buildFactorBase(B);
 
-    size_t need = base.size() + 200;
+    size_t need = base.size() + 10;
     vector<Relation> relations = collectRelations(alpha, p, base, need);
 
     vector<vector<int>> A;
@@ -300,8 +302,9 @@ uint64_t index_calculus( uint64_t alpha, uint64_t beta, uint64_t p){
     }
 
     vector<uint64_t> log_p = SLSMod(A, b, mod);
+    uint64_t x = computeLogBeta(alpha, beta, p, base, log_p);
+    return x;
 
-    return computeLogBeta(alpha, beta, p, base, log_p);
 }
 
 uint64_t index_calculus_general(uint64_t alpha, uint64_t beta, uint64_t p) {
@@ -319,3 +322,100 @@ uint64_t index_calculus_general(uint64_t alpha, uint64_t beta, uint64_t p) {
     return solveCongruence(u, v, mod);
 }
 
+vector<Relation> collectRelationsParallel(uint64_t alpha, uint64_t p, const vector<uint64_t>& base, size_t n) {
+    vector<Relation> relations;
+
+    mutex mtx;
+    set<uint64_t> used_k;
+    uint64_t mod = p - 1;
+
+    unsigned threads_count = thread::hardware_concurrency();
+
+    if (threads_count == 0) {
+        threads_count = 4;
+    }
+
+    vector<thread> threads;
+
+    auto worker = [&]() {
+            random_device rd;
+            mt19937_64 gen(rd());
+
+            uniform_int_distribution<uint64_t>
+                dist(0, mod - 1);
+
+            while (true) {
+                uint64_t k = dist(gen);
+
+                Relation r;
+
+                if (!tryRelation(alpha, k, p, base, r))
+                {
+                    continue;
+                }
+
+                lock_guard<mutex> lock(mtx);
+
+                if (relations.size() >= n) {
+                    return;
+                }
+
+                if (used_k.count(k)) {
+                    continue;
+                }
+
+                used_k.insert(k);
+
+                relations.push_back(r);
+            }
+        };
+
+    for (unsigned i = 0; i < threads_count; i++) {
+        threads.emplace_back(worker);
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    return relations;
+}
+
+uint64_t index_calculus_parallel(uint64_t alpha, uint64_t beta, uint64_t p){
+    uint64_t mod = p - 1;
+    uint64_t B = computeBound(p);
+    vector<uint64_t> base = buildFactorBase(B);
+
+    size_t need = base.size() + 10;
+
+    vector<Relation> relations =
+        collectRelationsParallel(alpha, p, base, need);
+
+    vector<vector<int>> A;
+    vector<uint64_t> b;
+
+    A.reserve(relations.size());
+    b.reserve(relations.size());
+
+    for (auto& r : relations) {
+        A.push_back(r.exponents);
+        b.push_back(r.k % mod);
+    }
+
+    vector<uint64_t> log_p = SLSMod(A, b, mod);
+    uint64_t x = computeLogBeta( alpha, beta, p, base,log_p);
+    return x;
+}
+
+uint64_t index_calculus_general_parallel( uint64_t alpha, uint64_t beta, uint64_t p) {
+    uint64_t mod = p - 1;
+
+    if (is_generator(alpha, p)) {
+        return index_calculus_parallel(alpha, beta, p);
+    }
+
+    uint64_t gamma = findGenerator(p);
+    uint64_t u = index_calculus_parallel(gamma, alpha, p);
+    uint64_t v = index_calculus_parallel(gamma, beta, p);
+    return solveCongruence(u, v, mod);
+}

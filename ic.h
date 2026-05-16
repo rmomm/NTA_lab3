@@ -5,6 +5,11 @@
 #include <chrono>
 #include <random>
 #include <algorithm>
+#include <set>
+
+#include <thread>
+#include <mutex>
+#include <atomic>
 
 using namespace std;
 
@@ -35,3 +40,7 @@ uint64_t computeLogBeta(uint64_t alpha, uint64_t beta, uint64_t p, const vector<
 
 uint64_t index_calculus(uint64_t alpha, uint64_t beta, uint64_t p);
 uint64_t index_calculus_general(uint64_t alpha, uint64_t beta, uint64_t p);
+
+vector<Relation> collectRelationsParallel(uint64_t alpha, uint64_t p, const vector<uint64_t>& base, size_t n);
+uint64_t index_calculus_parallel(uint64_t alpha, uint64_t beta, uint64_t p);
+uint64_t index_calculus_general_parallel(uint64_t alpha, uint64_t beta, uint64_t p);
