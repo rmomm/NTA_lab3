@@ -20,34 +20,66 @@ int main()
     cout << "Enter prime p: ";
     cin >> p;
 
+    cout << fixed << setprecision(4);
 
-    auto start = high_resolution_clock::now();
-    uint64_t x;
+    auto start1 = high_resolution_clock::now();
+
+    uint64_t x1;
+
     while (true) {
-        x = index_calculus_general(alpha, beta, p);
+        x1 = index_calculus_general(alpha, beta, p);
 
-        if (pow_mod(alpha, x, p) == beta)
+        if (pow_mod(alpha, x1, p) == beta)
             break;
     }
 
-    auto end = high_resolution_clock::now();
+    auto end1 = high_resolution_clock::now();
 
-    double duration = duration_cast<microseconds>(end - start).count();
+    double duration1 = duration_cast<microseconds>(end1 - start1).count();
 
-    cout << "\nCorrect x = " << x << endl;
+    cout << "\n index-calculus \n";
+    cout << " x = " << x1 << endl;
+    uint64_t check1 = pow_mod(alpha, x1, p);
 
-    uint64_t check = pow_mod(alpha, x, p);
+    cout << "Check: " << alpha << "^" << x1   << " mod " << p   << " = " << check1 << endl;
 
-    cout << "Check: " << alpha << "^" << x<< " mod "<< p << " = " << check << endl;
-
-    if (check == beta)
+    if (check1 == beta)
         cout << "Correct solution!\n";
     else
         cout << "Wrong result\n";
 
-    cout << fixed << setprecision(4);
+    cout << "Execution time: "  << duration1 << " microseconds\n";
 
-    cout << "\nExecution time: " << duration << " microseconds\n";
+
+    auto start2 = high_resolution_clock::now();
+
+    uint64_t x2;
+
+    while (true) {
+        x2 = index_calculus_general_parallel(alpha, beta, p);
+
+        if (pow_mod(alpha, x2, p) == beta)
+            break;
+    }
+
+    auto end2 = high_resolution_clock::now();
+
+    double duration2 = duration_cast<microseconds>(end2 - start2).count();
+
+    cout << "\n index-calculus (parallel)\n";
+
+    cout << " x = " << x2 << endl;
+
+    uint64_t check2 = pow_mod(alpha, x2, p);
+
+    cout << "Check: " << alpha << "^" << x2 << " mod " << p << " = " << check2 << endl;
+
+    if (check2 == beta)
+        cout << "Correct solution!\n";
+    else
+        cout << "Wrong result\n";
+
+    cout << "Execution time: " << duration2 << " microseconds\n";
 
     return 0;
 }
