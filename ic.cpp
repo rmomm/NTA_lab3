@@ -260,23 +260,27 @@ uint64_t computeLogBeta(uint64_t alpha, uint64_t beta, uint64_t p, const vector<
 
     vector<int> exp;
 
-    for (uint64_t l = 0; l < mod; l++) {
-        uint64_t value =
-            (beta * pow_mod(alpha, l, p)) % p;
+    while (true) {
+
+        uint64_t l = dist(gen);
+
+        uint64_t value = (beta * pow_mod(alpha, l, p)) % p;
 
         if (factorOverBase(value, base, exp)) {
 
             uint64_t sum = 0;
 
             for (size_t i = 0; i < base.size(); i++) {
-                sum =(sum + (uint64_t)exp[i] * log_p[i]) % mod;
+
+                sum = (sum + (uint64_t)exp[i] * log_p[i]) % mod;
             }
 
-            uint64_t x = (sum + mod - (l % mod)) % mod;
+            uint64_t x =
+                (sum + mod - l % mod) % mod;
 
-            if (pow_mod(alpha, x, p) == beta) 
-                return x; 
-
+            if (pow_mod(alpha, x, p) == beta) {
+                return x;
+            }
         }
     }
 }
